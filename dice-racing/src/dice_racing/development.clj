@@ -143,6 +143,24 @@
   (nth tbl-qual-trouble (first (roll-dice 1 10))))
 
 
+(defn get-starting-grid-penalty-points [drivers]
+  "given an ordered sequence of drivers returns the starting penalty points for each driver"
+  (letfn [(get-penalty [pos mxPenalty mxRows]
+                       (Math/floor (lmap 1 mxRows 0.0 mxPenalty (Math/round (* pos 0.5)))))]
+
+    (let [cnt (count drivers)
+          rows (Math/round (* cnt 0.5))
+          max-penalty (cond
+                       (< rows 5) 3
+                       (< rows 8) 4
+                       :else      6)
+          pos-driver (map #(conj [] %1 %2)
+                          (range 1 (inc cnt))
+                          drivers)]
+
+          (map #(get-penalty (first %) max-penalty rows) pos-driver))))
+
+
 (defn clamp [a b val]
   (min (max a val) b))
 
@@ -159,4 +177,20 @@
 
 (def qual-results (qualify-all race-roster atlanta))
 (process-qualify-results qual-results atlanta)
+
+; Testing race start order
+(def starting-row (Math/round (lmap 0 8 0.0 4.0 3)))
+(lmap 4 22 0 6 starting-row)
+(for [x (range 1 8)] (Math/round (lmap 0 7 0.0 6.0 x)))
+
+
+
+
+
+(build-starting-grid drivers)
+(def drivers (for [x race-roster] (:number x)))
+
+
+(map #(conj [] %1 %2) (range 0 (count [2 4])) '(2 4))
+
 
