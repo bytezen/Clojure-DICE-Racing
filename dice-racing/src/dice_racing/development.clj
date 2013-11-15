@@ -83,12 +83,12 @@
                                  (for [rec results :when (not-any? nil? (second rec))]
                                    [(first rec) (qual-speed-rating-to-mph track (reduce + (second rec)))]))
           (sort-qualifying [results]
-                           (sort-by #(second %) > (into [] results)))
+                           (sort-by #(second %) < (into [] results)))
           (calculate-dnq [results]
                          (for [rec results :when (some nil? (second rec))]
                            [(first rec) (qualify-trouble)]))]
-
-       (conj  (calculate-dnq qs) (sort-qualifying (calculate-qualify-mph qs t)))))
+       (into  (calculate-dnq qs) (into [] (sort-qualifying (calculate-qualify-mph qs t))))))
+;       (conj  (calculate-dnq qs) (sort-qualifying (calculate-qualify-mph qs t)))))
 
 
 
@@ -178,6 +178,7 @@
 (def qual-results (qualify-all race-roster atlanta))
 (process-qualify-results qual-results atlanta)
 
+(into [] '([48 189.653] [31 189.091] [7 188.934] [17 188.906] [5 188.657] [24 188.598] [20 188.291]))
 ; Testing race start order
 (def starting-row (Math/round (lmap 0 8 0.0 4.0 3)))
 (lmap 4 22 0 6 starting-row)
