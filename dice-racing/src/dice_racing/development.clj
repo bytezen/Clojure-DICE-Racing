@@ -88,7 +88,6 @@
                          (for [rec results :when (some nil? (second rec))]
                            [(first rec) (qualify-trouble)]))]
        (into  (calculate-dnq qs) (into [] (sort-qualifying (calculate-qualify-mph qs t))))))
-;       (conj  (calculate-dnq qs) (sort-qualifying (calculate-qualify-mph qs t)))))
 
 
 
@@ -107,15 +106,10 @@
                                       (map #(reduce + %)
                                            (map #(get qual-results %)
                                                 qs))))
-
-;          (conj (qual-speed-rating-to-mph track (map #(reduce + %)
-;                 (map #(get qual-results %)
-;                       qs)))
-;                dnqs)))
           (conj qualify-speed-mph dnqs)))
 
 
-(defn filter-no-trouble
+"(defn filter-no-trouble
   [record]
   (not-any? nil? (second record)))
 
@@ -127,16 +121,17 @@
 (defn sort-hash
   [h]
   (sort-by (fn [v] (second v))  h))
+"
 
-
-(defn get-qualify-speed
+"(defn get-qualify-speed
   [track results]
   (let [no-trouble (filter #(filter-no-trouble %) results)
         qual-speed (map (fn [v] {(first v) (qual-speed-rating-to-mph track (reduce + (second v)))})
                                        no-trouble)
         trouble    (filter #(filter-had-trouble %) results)]
     ;(conj (for [rec trouble]  {(first rec) (qualify-trouble)})
-        (first qual-speed)))
+        (first qual-speed)))"
+
 
 
 (defn qualify-trouble []
@@ -171,27 +166,21 @@
           beta (- 1 alpha)]
       (+ (* beta x) (* alpha y ))))
 
+(defn inv [a] (cond (or (= 0.0 a) (= 0 a)) a
+                    :else (* -1 a)))
+
 ; ----------------------------------
 ;    RUNNING - TESTING
 ; ----------------------------------
 
 (def qual-results (qualify-all race-roster atlanta))
-(process-qualify-results qual-results atlanta)
+(def race-order (process-qualify-results qual-results atlanta))
+race-order
+(def initial-speed-vals (into [] (map inv (build-starting-grid race-order))))
+initial-speed-vals
+(map (fn [a [x _]] [x a]) (build-starting-grid race-order) race-order)
+[initial-speed-vals race-order ]
 
-(into [] '([48 189.653] [31 189.091] [7 188.934] [17 188.906] [5 188.657] [24 188.598] [20 188.291]))
-; Testing race start order
-(def starting-row (Math/round (lmap 0 8 0.0 4.0 3)))
-(lmap 4 22 0 6 starting-row)
-(for [x (range 1 8)] (Math/round (lmap 0 7 0.0 6.0 x)))
+(assoc Race :lap-results (conj (:lap-results Race) initial-speed-vals))
 
-
-
-
-
-(build-starting-grid drivers)
 (def drivers (for [x race-roster] (:number x)))
-
-
-(map #(conj [] %1 %2) (range 0 (count [2 4])) '(2 4))
-
-
