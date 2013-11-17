@@ -6,6 +6,8 @@
 ;  data
 
 
+(def Race {:current-lap [0] :lap-results [] :caution {} :roll-archive []} )
+
 (def race-roster [driver48 driver24 driver07 driver17 driver5 driver20 driver2 driver31])
 
 ; ----------------------------------
@@ -138,8 +140,10 @@
   (nth tbl-qual-trouble (first (roll-dice 1 10))))
 
 
-(defn get-starting-grid-penalty-points [drivers]
-  "given an ordered sequence of drivers returns the starting penalty points for each driver"
+(defn build-starting-grid [drivers]
+  "given an ordered sequence of drivers returns the starting penalty points for each driver;
+  The (pos-driver ...) is a neat-o trick I learned from here (see comments)
+  http://stackoverflow.com/questions/4830900/how-do-i-find-the-index-of-an-item-in-a-vector "
   (letfn [(get-penalty [pos mxPenalty mxRows]
                        (Math/floor (lmap 1 mxRows 0.0 mxPenalty (Math/round (* pos 0.5)))))]
 
@@ -149,12 +153,16 @@
                        (< rows 5) 3
                        (< rows 8) 4
                        :else      6)
-          pos-driver (map #(conj [] %1 %2)
-                          (range 1 (inc cnt))
+          pos-driver (map vector (iterate inc 1)
                           drivers)]
 
-          (map #(get-penalty (first %) max-penalty rows) pos-driver))))
+          (map (fn [[x [y _]]]
+                 [ y (inv (get-penalty x max-penalty rows))])
+               pos-driver))))
 
+
+
+(positions [1 2 3])
 
 (defn clamp [a b val]
   (min (max a val) b))
@@ -169,18 +177,18 @@
 (defn inv [a] (cond (or (= 0.0 a) (= 0 a)) a
                     :else (* -1 a)))
 
+(defn update-race [race k v]
+  "get a new race with the new value,v, conjoined to the key"
+  (assoc race k (conj (k race) v)))
+
 ; ----------------------------------
 ;    RUNNING - TESTING
 ; ----------------------------------
 
 (def qual-results (qualify-all race-roster atlanta))
 (def race-order (process-qualify-results qual-results atlanta))
-race-order
-(def initial-speed-vals (into [] (map inv (build-starting-grid race-order))))
-initial-speed-vals
-(map (fn [a [x _]] [x a]) (build-starting-grid race-order) race-order)
-[initial-speed-vals race-order ]
+(def initial-speed-vals (build-starting-grid race-order))
 
-(assoc Race :lap-results (conj (:lap-results Race) initial-speed-vals))
 
-(def drivers (for [x race-roster] (:number x)))
+(def Race-Qual (update-race Race :roll-archive qual-results))
+(update-race Race-Qual :lap-results initial-speed-vals)
