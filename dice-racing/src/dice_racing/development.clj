@@ -22,13 +22,6 @@
 
 
 
-(defn create-prob-tbl
-  ; given a distribution d, create a lookup table with length 100
-  [d]
-  (reduce (fn [p v]
-            (into p (repeat (get v 1) (get v 0))))
-            [] d))
-
 
 (defn get-qual-speed
   [{qual-rating :qual-rating} roll]

@@ -71,3 +71,11 @@
 
 ;track data
 (def atlanta {:type :speed :name "Atlanta Motor Speedway" :rolls 1 :pit-window 8 :pit-stops 2 :total-laps 20 })
+
+
+(defn create-prob-tbl
+  ; given a distribution d, create a lookup table with length 100
+  [d]
+  (reduce (fn [p v]
+            (into p (repeat (get v 1) (get v 0))))
+            [] d))
