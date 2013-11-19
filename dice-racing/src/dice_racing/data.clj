@@ -1,5 +1,6 @@
-(ns dice-racing.data)
-(use 'clojure.core)
+(ns dice-racing.data
+  (:use clojure.core dice-racing.util))
+
 
 
 (def qual-speed-rating-a [[12 10]

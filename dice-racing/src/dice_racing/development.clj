@@ -1,5 +1,5 @@
 (ns dice-racing.development
-  (:use clojure.core dice-racing.drivers dice-racing.data))
+  (:use clojure.core dice-racing.drivers dice-racing.data dice-racing.util))
 ;(use 'clojure.core)
 
 ; ----------------------------------
@@ -12,13 +12,6 @@
 
 ; ----------------------------------
 ;  functions
-
-(defn roll-dice
-  ;roll a 's' sided dice 'n' times
-  [n s]
-  (if (= n 0)
-    []
-    (conj (roll-dice (dec n) s) (rand-int s))))
 
 
 
