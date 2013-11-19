@@ -14,6 +14,22 @@
 ;  functions
 
 
+(defn get-race-roster [ds {tt :type}]
+  (letfn [(rating [d t]
+                  ((t d)))
+          (prob-tbl [d t]
+                    (cond
+                     (= t :short) (:tbl-short-track d)
+                     (= t :speed) (:tbl-speed-track d)
+                     (= t :super) (:tbl-super-track d)
+                     (= t :road ) (:tbl-road-track d)
+                     :else [0 0 0]))]
+    (map #(let [{:keys [driver-name number qual-rating trbl-rating]} %]
+             {:driver-name driver-name
+              :number      number
+              :qual-rating qual-rating
+              :trbl-rating trbl-rating
+              :tbl-speed   (prob-tbl % tt)}) ds)))
 
 
 (defn get-qual-speed
