@@ -24,10 +24,9 @@
 
 
 (defn get-qual-speed
-  [{qual-rating :qual-rating} roll]
-  (let [prob-tbl (create-prob-tbl (get tbl-qual-speed-rating qual-rating))]
-    (get prob-tbl roll)))
-
+  [{qual-rating :qual-rating} [roll]]
+  (let [prob (prob-tbl (get tbl-qual-speed-rating qual-rating))]
+    (get prob roll)))
 
 (defn test-prob-table
   ; test that prob table sums to 100
