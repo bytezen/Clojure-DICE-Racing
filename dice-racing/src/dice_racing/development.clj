@@ -17,6 +17,10 @@
 
 
 (defn get-qual-speed
+  [{qual-rating :qual-rating} roll]
+  (let [ prob (prob-tbl (get tbl-qual-speed-rating qual-rating))]
+  (get prob roll)))
+
   [{qual-rating :qual-rating} r]
   (let [roll (if (vector? r) (first r) r)
         prob (prob-tbl (get tbl-qual-speed-rating qual-rating))]
