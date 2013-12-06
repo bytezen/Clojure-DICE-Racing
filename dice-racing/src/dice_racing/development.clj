@@ -6,14 +6,31 @@
 ;  data
 
 (def *Game* [])
-(def *Race* (ref {:current-lap 0 :lap-results {} :caution {} :roll-archive {}  :driver-status {} :track nil} ))
+(def *Race* (ref {:current-lap 0 :lap-results {}
+                  :lap-count {} :lap-status {}
+                  :caution {} :roll-archive {}
+                  :driver-status {} :track nil} ))
 
 (defn restart-race []
-  (dosync (ref-set *Race* {:current-lap 0 :lap-results {} :caution {} :roll-archive {} :driver-status {} :track nil})))
+  (dosync (ref-set *Race* {:current-lap 0 :lap-results {} :caution false :roll-archive {} :driver-status {} :track nil})))
 
 (restart-race)
+
+
 ; ----------------------------------
 ;  functions
+
+(defmacro update-race
+  "update race, r, with the value, v, for key, k"
+  [r k v]
+  (list 'dosync (list 'alter r 'assoc  k v)))
+
+
+(defn run-normal
+  "Lookup every index in the vector of indices, rs, in the vector tbl.
+  Return the sum of the values, tbl[rs]."
+  [tbl rs]
+  (reduce + (map tbl rs)))
 
 (defn get-race-roster
   [ds tt]
@@ -31,8 +48,8 @@
                                 :d#      number
                                 :qual-rating qual-rating
                                 :trbl-rating trbl-rating
-                                :tbl-speed   (prob-tbl (speed-tbl d))}}
-                       )]
+                                :tbl-speed   (prob-tbl (speed-tbl d))
+                                :tbl-trbl    (prob-tbl (get tbl-race-trouble trbl-rating))}})]
     (map #(make-record %) ds)))
 
 
@@ -87,6 +104,9 @@
                                       1000.0))))))
 
 
+(defn qualify-trouble []
+  (nth tbl-qual-trouble (first (roll-dice 1 10))))
+
 
 (defn process-qualify-results
   "qualify a race-roster for a track.
@@ -123,8 +143,6 @@
           (conj qualify-speed-mph dnqs)))
 
 
-(defn qualify-trouble []
-  (nth tbl-qual-trouble (first (roll-dice 1 10))))
 
 
 (defn build-starting-grid [drivers]
@@ -150,23 +168,6 @@
 
 
 
-(defn clamp [a b val]
-  (min (max a val) b))
-
-
-(defn lmap [a b x y val]
-    (let [cval (clamp a b val)
-          alpha (/ (- cval a) (- b a))
-          beta (- 1 alpha)]
-      (+ (* beta x) (* alpha y ))))
-
-(defn inv [a] (cond (or (= 0.0 a) (= 0 a)) a
-                    :else (* -1 a)))
-
-(defn update-race [ k v]
-  "get a new race with the new value,v, conjoined to the key"
-  (def *Race* (assoc Race k (conj (k *Race*) v))))
-
 (defn update-game [r]
   (def *Game* (into *Game* [r])))
 
@@ -174,38 +175,36 @@
 (defn run-lap
   [d R]
   (letfn [(last-speed [R d]
-                         (for [[driver speed] (:lap-results R) :when (= driver d)] speed))
+                         (first (for [[driver speed] (:lap-results R) :when (= driver d)] speed)))
 
-          (current-lap [prob rs]
+          (process-trouble []
+                           (let [trbl-tbl (:tbl-trbl d)
+                                 [r] (roll-dice 1 100)
+                                 trbl-number (get trbl-tbl r)
+                                 race-order (into [] (for [[a _] (:lap-results @*Race*)] a))
+                                 rest-of-pack  (reverse (take-while
+                                                        (fn [driver]
+                                                            (not (= (:d# d) driver)))
+                                                          (reverse race-order)))]
+                             (cond (< trbl-number 100) (do
+                                                         (update-race *Race* :caution true)
+                                                         (car-hits-wall-hard  d rest-of-pack)
+                                                         ))))
+
+          (process-current-lap [rs]
              (if (not-any? nil? rs)
-               (map prob rs)
-               (fn [] "process trouble")))
+               (fn [a] (run-normal a rs))
+               (process-trouble)))
 
           (updated-speed [rs]
-                         (reduce + (into (current-lap (:tbl-speed d) rs)
-                                         (last-speed R (:d# d)))))
-
-          (get-tbl-speed [d]
-                         )]
+                         (+ (last-speed R (:d# d))
+                            ((process-current-lap rs) (:tbl-speed d) )))]
 
     (let [rolls (roll-dice (:rolls (:track R)) 100)
           tbl (:tbl-speed d)]
+;      (process-trouble))))
+      [(:d# d) (updated-speed rolls)]))) ;(temp-dev)])))
 
-      [(:d# d) (updated-speed rolls)])))
-  ;    (interleave (current-speed (:tbl-speed d) rolls) (last-speed R driverNum)))))
-
-
-
-
-(keys @*Race*)
-(:lap-results @*Race*)
-(map #(run-lap % @*Race*) (:lap-results @*Race*))
-(:lap-results @*Race*)
-
-(keys roster)
-(13.0 13.0 11.0 17.0 12.0 13.0 12.0 16.0 11.0 11.0)
-*Race*
-(get roster 17)
 
 
 ; ----------------------------------
@@ -223,76 +222,25 @@
 (do
   (def roster (into {} (get-race-roster [driver17 driver60 driver38 driver48 driver24
                                          driver33 driver18 driver14 driver22 driver31] (:type (:track @*Race*)) )))
+
+  (let [dat (into {} (for [k (keys roster)] [k [:normal run-normal]]))]
+  (update-race *Race* :lap-status dat))
+
   (def qual-results (qualify-all roster (:type (:track @*Race*))))
   (def race-order (process-qualify-results qual-results (:track @*Race*)))
   (def initial-speed-vals (build-starting-grid race-order))
+  (update-race *Race* :lap-results initial-speed-vals)
 )
 
-; update race with qualifying results
-(update-race *Race* :lap-results initial-speed-vals)
 
-; run the race!!
-(update-race *Race* :lap-results
+
+; run a lap
+(do
+  (update-race *Race* :lap-results
              (sort-by #(second %) >
                       (map (fn [[driver currSpeed]]
                              (run-lap (get roster driver) @*Race*))
                            (:lap-results @*Race*))))
-
-
-
-
-
+  (update-race *Race* :current-lap (inc (:current-lap @*Race*))))
 
 @*Race*
-(macroexpand-1 '(update-race *Race* :current-lap 10))
-Race
-roster
-
-(defmacro update-race
-  "update race, r, with the value, v, for key, k"
-  [r k v]
-  (list 'dosync (list 'alter r 'assoc  k v)))
-
-(do
-  (def Race (restart-race))
-  (def Race (assoc Race :track (:atlanta track)))
-  (update-game Race)
-  Race
-  (def roster (get-race-roster [driver07] (:atlanta track)))
-  (def qual-results (qualify-all roster (:atlanta track)))
-  (def race-order (process-qualify-results qual-results (:atlanta track)))
-  (def initial-speed-vals [[(:number driver07) 0]])
-  (update-race :lap-results initial-speed-vals)
-  (update-race :driver-status (map (fn [v]
-                                     {(:number v) :normal})
-                                   roster ))
-  )
-
-
-
-(def roster (into {} (get-race-roster [driver07 driver60 driver38] :speed)))
-
-qual-results
-Race
-(def *Game* (into *Game* [Race]) )
-*Game*
-(def *Game* [])
-
-(def qual-results (qualify-all race-roster atlanta))
-qual-results
-(def race-order (process-qualify-results qual-results atlanta))
-race-order
-(def initial-speed-vals (build-starting-grid race-order))
-initial-speed-vals
-
-(def Race-Qual (update-race Race :roll-archive qual-results))
-(update-race Race-Qual :lap-results initial-speed-vals)
-
-(def race-roster [driver48 driver24 driver07 driver17 driver5 driver20 driver2 driver31])
-
-(type roster)
-roster
-(def d07 (first test-roster))
-
-
-(run-lap (first roster) (:track Race))

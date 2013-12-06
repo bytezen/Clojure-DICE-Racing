@@ -13,6 +13,31 @@
 (defn car-out-of-race [s]
   [:dnf s])
 
+(defn lose-a-lap [s]
+  [:lose-lap s])
+
+; Trouble Number 0
+(defn car-hits-wall-hard
+  "Determine the fate of the driver who caused the wreck, c, and other drivers,ds
+  who may or may not be involved in the wreck"
+  [c ds]
+  (letfn [(wrecked-fate [d]
+                        (cond (< (first (roll-dice 1 10)) 3)
+                              (fn [& a]
+                                (car-out-of-race "you were caught in a wreck and are out of the race"))
+                              :else (fn [& a]
+                                      (lose-a-lap "you were caught in the wreck and lose a lap because of repairs."))))
+          (fate [d]
+                  (fn [& a] [:pit "you hit the wall hard and must pit"]))]
+
+    (into [(fate c)] (map #(wrecked-fate %) ds))))
+
+
+
+  (car-hits-wall-hard 17 [60 38])
+
+
+
 (defn spin-out
   []
   (under-caution "Car loses control and spins out. Caution flag is up."))
@@ -34,7 +59,7 @@
 (defn dnf-brake-failure [_]
   (car-out-of-race "Brake Failure. Car out of race"))
 
-(defn dnf-blown-engine-caution? []
+(defn dnf-blown-engine-caution? [d]
   "Car is out of race with blown engine, but check for caution"
   (cond (< 3 (first (roll-dice 1 10)))
         (under-caution (str (:d# d)
@@ -62,8 +87,8 @@
 (defn car-tight-9 []
   (car-trouble 9 "tight"))
 
-(defn setup-trouble-1! []
-  (fn [speed] (dec speed)))
+;(defn setup-trouble-1! []
+;  (fn [speed] (dec speed)))
 
 (defn setup-trouble-2! []
   (fn [speed] (- 2 speed)))
