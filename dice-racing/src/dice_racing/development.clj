@@ -29,8 +29,8 @@
 (defn run-normal
   "Lookup every index in the vector of indices, rs, in the vector tbl.
   Return the sum of the values, tbl[rs]."
-  [tbl rs]
-  (reduce + (map tbl rs)))
+  [& {:keys [tbl rolls]}]
+  (reduce + (map tbl rolls)))
 
 (defn get-race-roster
   [ds tt]
@@ -191,22 +191,29 @@
                                                          (car-hits-wall-hard  d rest-of-pack)
                                                          ))))
 
-          (process-current-lap [rs]
-             (if (not-any? nil? rs)
-               (fn [a] (run-normal a rs))
-               (process-trouble)))
+
+          (get-drivers-fn [d]
+            (second (get (:lap-status R) (:d# d))))
 
           (updated-speed [rs]
                          (+ (last-speed R (:d# d))
-                            ((process-current-lap rs) (:tbl-speed d) )))]
+                            ((get-drivers-fn d) :rolls rs)))]
+
 
     (let [rolls (roll-dice (:rolls (:track R)) 100)
           tbl (:tbl-speed d)]
-;      (process-trouble))))
-      [(:d# d) (updated-speed rolls)]))) ;(temp-dev)])))
+      (if (some nil? rolls) (process-trouble))
+      [(:d# d) (updated-speed rolls)])))
+
+(defn get-drivers-fn [d# R]
+  (second (get (:lap-status R) d#)))
 
 
+(run-lap  (get roster 60) @*Race*)
 
+(let [f (get-drivers-fn 60 @*Race*)
+      t (:tbl-speed (get roster 60))]
+  (f :tbl t :rolls [50 50]))
 ; ----------------------------------
 ;    RUNNING - TESTING
 ; ----------------------------------
@@ -223,7 +230,9 @@
   (def roster (into {} (get-race-roster [driver17 driver60 driver38 driver48 driver24
                                          driver33 driver18 driver14 driver22 driver31] (:type (:track @*Race*)) )))
 
-  (let [dat (into {} (for [k (keys roster)] [k [:normal run-normal]]))]
+  (let [dat (into {}
+                  (for [{k :d# tbl :tbl-speed} (vals roster)] [k [:normal (fn [& {:keys [rolls]}]
+                                                       (run-normal :tbl tbl :rolls rolls))]]))]
   (update-race *Race* :lap-status dat))
 
   (def qual-results (qualify-all roster (:type (:track @*Race*))))
@@ -231,6 +240,8 @@
   (def initial-speed-vals (build-starting-grid race-order))
   (update-race *Race* :lap-results initial-speed-vals)
 )
+
+
 
 
 
