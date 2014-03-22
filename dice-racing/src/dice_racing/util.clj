@@ -24,3 +24,10 @@
 
 (defn inv [a] (cond (or (= 0.0 a) (= 0 a)) a
                     :else (* -1 a)))
+
+
+
+(defmacro update-race
+  "update race, r, with the value, v, for key, k"
+  [r k v]
+  (list 'dosync (list 'alter r 'assoc  k v)))

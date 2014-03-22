@@ -20,10 +20,6 @@
 ; ----------------------------------
 ;  functions
 
-(defmacro update-race
-  "update race, r, with the value, v, for key, k"
-  [r k v]
-  (list 'dosync (list 'alter r 'assoc  k v)))
 
 
 (defn run-normal
@@ -202,14 +198,18 @@
 
     (let [rolls (roll-dice (:rolls (:track R)) 100)
           tbl (:tbl-speed d)]
-      (if (some nil? rolls) (process-trouble))
-      [(:d# d) (updated-speed rolls)])))
+      (if (some nil? rolls)
+        (process-trouble)
+        (do
+          [(:d# d) (updated-speed rolls)])))))
 
 (defn get-drivers-fn [d# R]
   (second (get (:lap-status R) d#)))
 
-
+@*Race*
 (run-lap  (get roster 60) @*Race*)
+
+
 
 (let [f (get-drivers-fn 60 @*Race*)
       t (:tbl-speed (get roster 60))]
@@ -242,7 +242,8 @@
 )
 
 
-
+Create a Function to update the lap status functions for the Race -- test it here
+and then use it in the Trouble file
 
 
 ; run a lap
